@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stopwatch 10s</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+body{margin:0;font-family:sans-serif;background:#1e3c72;color:#fff;display:flex;align-items:center;justify-content:center;min-height:100vh}
+.c{background:rgba(0,0,0,.4);padding:30px;border-radius:20px;max-width:420px;width:90%;text-align:center}
+.t{font:bold 3.5em/1em monospace;margin:20px 0}
+button{background:#ff4757;color:#fff;border:none;padding:15px 30px;font-size:1.2em;border-radius:50px;cursor:pointer;margin:10px}
+button:disabled{background:#636e72;cursor:not-allowed}
+.r{margin-top:20px;font-size:1.3em;padding:10px;border-radius:10px;background:rgba(255,255,255,.1)}
+.p{color:#2ed573;animation:p 1s infinite}
+@keyframes p{50%{transform:scale(1.05)}}
+</style>
+</head>
+<body>
+<div class="c">
+  <h1>Stopwatch Challenge</h1>
+  <p>Stop <b>exactly</b> at <b>00:10.000</b></p>
+  <div class="t" id="d">00:00.000</div>
+  <button id="s">Start</button>
+  <button id="t" disabled>Stop</button>
+  <div class="r" id="r">Ready?</div>
+</div>
+<script>
+const TG=window.Telegram?.WebApp; TG?.ready(); TG?.expand();
+const TARGET=10000, P=50, C=200;
+const d=document.getElementById('d'), s=document.getElementById('s'), t=document.getElementById('t'), r=document.getElementById('r');
+let start=0, e=0, int=null, run=false;
+function f(ms){
+  const m=Math.floor(ms/60000).toString().padStart(2,'0');
+  const sec=Math.floor(ms/1000)%60;
+  const s=sec.toString().padStart(2,'0');
+  return `${m}:${s}.${(ms%1000).toString().padStart(3,'0')}`;
+}
+function up(){d.textContent=f(e);}
+function begin(){
+  if(run)return;
+  run=true; start=Date.now()-e; s.disabled=true; t.disabled=false;
+  r.textContent='Go! Stop at 00:10.000';
+  int=setInterval(()=>{e=Date.now()-start; up();},7);
+}
+function end(){
+  if(!run)return;
+  clearInterval(int); run=false; s.disabled=false; t.disabled=true;
+  const diff=Math.abs(e-TARGET);
+  let msg='',cls='r';
+  if(diff<=P){msg=`PERFECT!<br>${f(e)} (±${diff} ms)`;cls='r p';}
+  else if(diff<=C){msg=`Close!<br>${f(e)} (${(diff/1000).toFixed(2)}s off)`;}
+  else{msg=`${f(e)}<br>${(diff/1000).toFixed(2)}s off`;}
+  r.innerHTML=msg; r.className=cls;
+}
+function reset(){
+  clearInterval(int); run=false; e=0; s.disabled=false; t.disabled=true; up();
+  r.textContent='Ready? Nail 10 seconds!';
+}
+s.onclick=()=>{reset(); begin();}
+t.onclick=end;
+reset();
+</script>
+</body>
+</html>
