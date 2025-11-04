@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Stopwatch 10s - Leaderboard</title>
+  <title>Stopwatch Leaderboard</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
@@ -12,20 +12,21 @@
     .t{font:bold 3.5em/1em monospace;margin:20px 0}
     button{background:#ff4757;color:#fff;border:none;padding:15px 30px;font-size:1.2em;border-radius:50px;cursor:pointer;margin:10px}
     button:disabled{background:#636e72;cursor:not-allowed}
-    .r{margin-top:20px;font-size:1.3em;padding:10px;border-radius:10px;background:rgba(255,255,255,.1)}
+    .r{margin-top:20px;font-size:1.3em;padding:10px;border-radius:10px;background:rgba(255,255,255,.1);min-height:50px}
     .p{color:#2ed573;animation:p 1s infinite}
     .sbtn{background:#00bcd4 !important;margin-top:15px}
-    .lb{margin-top:20px;text-align:left;max-height:200px;overflow-y:auto}
+    .lb{margin-top:20px;text-align:left;max-height:200px;overflow-y:auto;background:rgba(0,0,0,.3);padding:10px;border-radius:10px}
     .lb h3{margin:0 0 10px}
     .lb ul{margin:0;padding:0;list-style:none}
     .lb li{padding:8px;background:rgba(255,255,255,.1);margin:5px 0;border-radius:5px;display:flex;justify-content:space-between}
     .rank{color:#ffd700;font-weight:bold}
+    .error{color:#ff6b6b}
     @keyframes p{50%{transform:scale(1.05)}}
   </style>
 </head>
 <body>
   <div class="c">
-    <h1>Stopwatch Challenge</h1>
+    <h1>⏱️ Stopwatch Challenge</h1>
     <p>Stop <b>exactly</b> at <b>00:10.000</b></p>
     <div class="t" id="d">00:00.000</div>
     <button id="s">Start</button>
@@ -33,18 +34,17 @@
     <div class="r" id="r">Ready? Nail 10 seconds!</div>
     
     <div class="lb" id="lb" style="display:none">
-      <h3>TOP 10</h3>
-      <ul id="lb-list"></ul>
+      <h3>🏆 TOP 10</h3>
+      <ul id="lb-list"><li>Loading...</li></ul>
     </div>
     
-    <button id="showLb" class="sbtn" style="display:none">View Leaderboard</button>
+    <button id="showLb" class="sbtn" style="display:none">Refresh Leaderboard</button>
   </div>
 
   <script>
-    // === CONFIG: CHANGE THIS TO YOUR BOT ===
-    const BOT_USERNAME = 'stopwatch10s_bot';  // ← YOUR BOT USERNAME HERE
+    // === CHANGE THIS ===
+    const BOT_USERNAME = 'stopwatch10s_bot';  // ← YOUR BOT
 
-    // === TELEGRAM + CONFETTI ===
     const TG = window.Telegram?.WebApp;
     if (TG) { TG.ready(); TG.expand(); }
 
@@ -52,12 +52,10 @@
     const d = document.getElementById('d'), s = document.getElementById('s'), t = document.getElementById('t'), r = document.getElementById('r');
     const lb = document.getElementById('lb'), lbList = document.getElementById('lb-list'), showLb = document.getElementById('showLb');
     let start = 0, elapsed = 0, interval = null, running = false;
-    let userId = TG?.initDataUnsafe?.user?.id || 'anon_' + Math.random().toString(36).substr(2,9);
+    let userId = TG?.initDataUnsafe?.user?.id || 'anon_' + Date.now();
     let userName = TG?.initDataUnsafe?.user?.first_name || 'Player';
     let lastDiff = 0, lastRank = 0;
 
-
-    // === FORMAT TIME ===
     function format(ms) {
       const mins = Math.floor(ms / 60000).toString().padStart(2, '0');
       const secs = Math.floor(ms / 1000) % 60;
@@ -67,13 +65,11 @@
     }
     function update() { d.textContent = format(elapsed); }
 
-    // === ERROR DISPLAY ===
     function showError(msg) {
-      r.innerHTML = `<span style="color:#ff6b6b">Error: ${msg}</span>`;
-      r.className = 'r';
+      r.innerHTML = `<div class="error">⚠️ ${msg}</div>`;
+      console.error(msg);
     }
 
-    // === API CALLS ===
     async function saveScore(diff) {
       const score = { id: userId, diff, time: Date.now(), name: userName };
       try {
@@ -82,65 +78,57 @@
           body: JSON.stringify(score),
           headers: { 'Content-Type': 'application/json' }
         });
-        if (!res.ok) throw new Error(await res.text());
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
       } catch (e) {
-        console.error('Save failed:', e);
-        showError('Failed to save score');
+        showError('Save failed — check Redis connection');
       }
     }
 
     async function getLeaderboard() {
       try {
-        const res = await fetch('/api/leaderboard?' + Date.now());
-        if (!res.ok) throw new Error(await res.text());
-        return await res.json();
+        const res = await fetch('/api/leaderboard?t=' + Date.now());
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        return Array.isArray(data) ? data : [];
       } catch (e) {
-        console.error('Load failed:', e);
-        showError('Failed to load leaderboard');
+        showError('Leaderboard failed — check Vercel logs');
         return [];
       }
     }
 
     async function loadLb() {
+      lbList.innerHTML = '<li>Loading...</li>';
       const scores = await getLeaderboard();
-      if (scores.length === 0) {
-        lbList.innerHTML = '<li>No scores yet!</li>';
-      } else {
-        lastRank = scores.findIndex(s => s.id === userId) + 1;
-        lbList.innerHTML = scores.slice(0,10).map((s,i) =>
-          `<li><span class="rank">#${i+1}</span> ${s.name}: ±${s.diff}ms</li>`
-        ).join('');
-      }
+      lbList.innerHTML = scores.length === 0 
+        ? '<li>No scores yet!</li>'
+        : scores.slice(0,10).map((s,i) => 
+            `<li><span class="rank">#${i+1}</span> ${s.name}: ±${s.diff}ms</li>`
+          ).join('');
+      lastRank = scores.findIndex(s => s.id === userId) + 1;
       lb.style.display = 'block';
+      showLb.style.display = 'block';
     }
 
-    // === SHARE FUNCTION ===
     function shareScore() {
       const time = format(elapsed);
       const rankText = lastRank > 0 ? ` | Rank #${lastRank}` : '';
-      const text = `I hit ${time} (±${lastDiff}ms) in Stopwatch Challenge!${rankText}\n\nPlay now: https://t.me/${BOT_USERNAME}/app`;
+      const text = `I hit ${time} (±${lastDiff}ms) in Stopwatch Challenge!${rankText}\n\nPlay: https://t.me/${BOT_USERNAME}/app`;
       
       if (TG) {
         TG.showPopup({
-          title: 'Share your score!',
+          title: 'Share Score!',
           message: text,
           buttons: [{ type: 'default', text: 'Share', id: 'share' }]
         }, (btn) => {
-          if (btn === 'share') {
-            const url = `https://t.me/share/url?url=${encodeURIComponent(text)}`;
-            TG.openTelegramLink(url);
-          }
+          if (btn === 'share') TG.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(text)}`);
         });
-      } else {
-        alert(text);
       }
     }
 
-    // === GAME LOGIC ===
     function startTimer() {
       if (running) return;
       running = true; start = Date.now() - elapsed;
-      s.disabled = true; t.disabled = false; showLb.style.display = 'none';
+      s.disabled = true; t.disabled = false;
       r.textContent = 'Go! Stop at 00:10.000'; r.className = 'r';
       interval = setInterval(() => {
         elapsed = Date.now() - start;
@@ -160,40 +148,35 @@
 
       let msg = '', cls = 'r';
       if (lastDiff <= PERFECT) {
-        msg = `PERFECT!<br>${format(elapsed)} (±${lastDiff} ms)`;
+        msg = `🎯 PERFECT!<br>${format(elapsed)} (±${lastDiff} ms)`;
         cls = 'r p';
-        confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+        confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
         winSound.play();
       } else if (lastDiff <= CLOSE) {
-        msg = `Close!<br>${format(elapsed)} (${(lastDiff/1000).toFixed(2)}s off)`;
+        msg = `😎 Close!<br>${format(elapsed)} (${(lastDiff/1000).toFixed(2)}s off)`;
       } else {
-        msg = `${format(elapsed)}<br>${(lastDiff/1000).toFixed(2)}s off`;
+        msg = `😅 ${format(elapsed)}<br>${(lastDiff/1000).toFixed(2)}s off`;
       }
       r.innerHTML = msg; r.className = cls;
-      
-      showLb.style.display = 'block';
-      showLb.onclick = loadLb;
 
-      // Add Share Button
       setTimeout(() => {
         if (document.querySelector('.share-btn')) return;
         const btn = document.createElement('button');
-        btn.textContent = 'Share Score';
+        btn.textContent = '📤 Share Score';
         btn.className = 'sbtn share-btn';
         btn.onclick = shareScore;
         document.querySelector('.c').appendChild(btn);
-      }, 100);
+      }, 200);
     }
 
     function reset() {
       clearInterval(interval); running = false; elapsed = 0;
       s.disabled = false; t.disabled = true; update();
-      r.textContent = 'Ready? Nail 10 seconds!'; r.className = 'r';
-      showLb.style.display = 'none'; lb.style.display = 'none';
+      r.innerHTML = 'Ready? Nail 10 seconds!'; r.className = 'r';
+      lb.style.display = 'none'; showLb.style.display = 'none';
       const old = document.querySelector('.share-btn'); if (old) old.remove();
     }
 
-    // === EVENTS ===
     s.onclick = () => { reset(); startTimer(); };
     t.onclick = stopTimer;
     showLb.onclick = loadLb;
