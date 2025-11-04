@@ -3,219 +3,148 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stopwatch Stopping Game - Hit 00:00:10 Exactly!</title>
+    <title>Stopwatch Game – Hit 00:10.000</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
-            color: #fff;
-            text-align: center;
+        body{
+            font-family:'Segoe UI',sans-serif;
+            display:flex;flex-direction:column;align-items:center;justify-content:center;
+            height:100vh;margin:0;background:linear-gradient(135deg,#1e3c72,#2a5298);
+            color:#fff;text-align:center;
         }
-        .container {
-            background: rgba(0, 0, 0, 0.4);
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            max-width: 400px;
-            width: 90%;
+        .container{
+            background:rgba(0,0,0,.4);padding:30px;border-radius:20px;
+            box-shadow:0 10px 30px rgba(0,0,0,.5);max-width:420px;width:90%;
         }
-        h1 {
-            margin-top: 0;
-            font-size: 2em;
+        h1{margin-top:0;font-size:2em;}
+        .stopwatch{
+            font-size:3.5em;font-weight:bold;margin:20px 0;letter-spacing:2px;
+            text-shadow:0 0 10px rgba(255,255,255,.5);
         }
-        .stopwatch {
-            font-size: 3.5em;
-            font-weight: bold;
-            margin: 20px 0;
-            letter-spacing: 3px;
-            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        button{
+            background:#ff4757;color:#fff;border:none;padding:15px 30px;
+            font-size:1.2em;border-radius:50px;cursor:pointer;transition:.3s;
+            box-shadow:0 5px 15px rgba(255,71,87,.4);margin:10px;
         }
-        button {
-            background-color: #ff4757;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            font-size: 1.2em;
-            border-radius: 50px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(255, 71, 87, 0.4);
-            margin: 10px;
+        button:hover{background:#ff3742;transform:translateY(-3px);
+            box-shadow:0 8px 20px rgba(255,71,87,.6);}
+        button:active{transform:translateY(1px);}
+        button:disabled{background:#636e72;cursor:not-allowed;transform:none;box-shadow:none;}
+        .result{
+            margin-top:20px;font-size:1.3em;min-height:50px;padding:10px;
+            border-radius:10px;background:rgba(255,255,255,.1);
         }
-        button:hover {
-            background-color: #ff3742;
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(255, 71, 87, 0.6);
-        }
-        button:active {
-            transform: translateY(1px);
-        }
-        button:disabled {
-            background-color: #636e72;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-        .result {
-            margin-top: 20px;
-            font-size: 1.3em;
-            min-height: 50px;
-            padding: 10px;
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.1);
-        }
-        .perfect {
-            color: #2ed573;
-            font-weight: bold;
-            animation: pulse 1s infinite;
-        }
-        .close {
-            color: #ffa502;
-        }
-        .far {
-            color: #ff6b6b;
-        }
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-        .instructions {
-            margin: 15px 0;
-            font-size: 1.1em;
-            line-height: 1.5;
-        }
+        .perfect{color:#2ed573;font-weight:bold;animation:pulse 1s infinite;}
+        .close{color:#ffa502;}
+        .far{color:#ff6b6b;}
+        @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.05)}100%{transform:scale(1)}}
+        .instructions{margin:15px 0;font-size:1.1em;line-height:1.5;}
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>⏱️ Stopwatch Challenge</h1>
-        <p class="instructions">Click <strong>Start</strong> to begin the timer.<br>Then click <strong>Stop</strong> <em>exactly</em> at <strong>00:00:10</strong>!</p>
-        
-        <div class="stopwatch" id="display">00:00:00</div>
-        
+        <h1>Stopwatch Challenge</h1>
+        <p class="instructions">
+            Click <strong>Start</strong> → stop <em>exactly</em> at <strong>00:10.000</strong>
+        </p>
+
+        <div class="stopwatch" id="display">00:00.000</div>
+
         <button id="startBtn">Start</button>
         <button id="stopBtn" disabled>Stop</button>
-        
+
         <div class="result" id="result">
-            Get ready! Can you hit exactly 10 seconds?
+            Ready? Nail 10 seconds to the millisecond!
         </div>
     </div>
 
     <script>
-        // Game settings
-        const TARGET_SECONDS = 10;
-        const TARGET_MS = TARGET_SECONDS * 1000;
-        const PERFECT_THRESHOLD = 50; // ±50ms = perfect
-        const CLOSE_THRESHOLD = 200;  // ±200ms = close
+        // ==== SETTINGS ====
+        const TARGET_MS = 10000;               // 10 seconds
+        const PERFECT_THRESHOLD = 50;          // ±50 ms → perfect
+        const CLOSE_THRESHOLD   = 200;         // ±200 ms → close
 
-        // DOM elements
+        // ==== ELEMENTS ====
         const display = document.getElementById('display');
         const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const result = document.getElementById('result');
+        const stopBtn  = document.getElementById('stopBtn');
+        const result   = document.getElementById('result');
 
-        // Timer variables
+        // ==== TIMER STATE ====
         let startTime = 0;
-        let elapsedTime = 0;
-        let timerInterval = null;
-        let isRunning = false;
+        let elapsed   = 0;
+        let interval  = null;
+        let running   = false;
 
-        // Format time as HH:MM:SS
-        function formatTime(ms) {
-            const totalSeconds = Math.floor(ms / 1000);
-            const hours = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-            const minutes = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-            const seconds = String(totalSeconds % 60).padStart(2, '0');
-            return `${hours}:${minutes}:${seconds}`;
+        // ==== DISPLAY FORMAT (mm:ss.mmm) – NO HOURS ====
+        function format(ms){
+            const totalSec = Math.floor(ms/1000);
+            const m = String(Math.floor(totalSec/60)).padStart(2,'0');
+            const s = String(totalSec%60).padStart(2,'0');
+            const milli = String(ms%1000).padStart(3,'0');
+            return `${m}:${s}.${milli}`;
         }
 
-        // Update display
-        function updateDisplay() {
-            display.textContent = formatTime(elapsedTime);
-        }
+        function updateDisplay(){ display.textContent = format(elapsed); }
 
-        // Start the timer
-        function startTimer() {
-            if (isRunning) return;
-            
-            isRunning = true;
-            startTime = Date.now() - elapsedTime;
+        // ==== START ====
+        function start(){
+            if(running) return;
+            running = true;
+            startTime = Date.now() - elapsed;
             startBtn.disabled = true;
-            stopBtn.disabled = false;
-            result.textContent = 'Go! Try to stop at exactly 00:00:10';
+            stopBtn.disabled  = false;
+            result.textContent = 'Go! Stop at 00:10.000';
             result.className = 'result';
 
-            timerInterval = setInterval(() => {
-                elapsedTime = Date.now() - startTime;
+            interval = setInterval(() => {
+                elapsed = Date.now() - startTime;
                 updateDisplay();
-            }, 10); // Update every 10ms for precision
+            }, 7);
         }
 
-        // Stop the timer and check result
-        function stopTimer() {
-            if (!isRunning) return;
-
-            clearInterval(timerInterval);
-            isRunning = false;
+        // ==== STOP & EVALUATE ====
+        function stop(){
+            if(!running) return;
+            clearInterval(interval);
+            running = false;
             startBtn.disabled = false;
-            stopBtn.disabled = true;
+            stopBtn.disabled  = true;
 
-            const finalTime = elapsedTime;
-            const difference = Math.abs(finalTime - TARGET_MS);
-            const diffSeconds = (difference / 1000).toFixed(3);
+            const diff = Math.abs(elapsed - TARGET_MS);
+            const diffSec = (diff/1000).toFixed(3);
 
-            updateDisplay();
-
-            // Determine accuracy
-            let message = '';
-            let className = 'result';
-
-            if (difference <= PERFECT_THRESHOLD) {
-                message = `🎯 PERFECT! You stopped at exactly ${formatTime(finalTime)}!<br>±${(difference).toFixed(0)}ms off!`;
-                className += ' perfect';
-            } else if (difference <= CLOSE_THRESHOLD) {
-                message = `😎 So close! ${formatTime(finalTime)}<br>Only ${diffSeconds}s off!`;
-                className += ' close';
-            } else {
-                message = `😅 You stopped at ${formatTime(finalTime)}<br>${diffSeconds}s off target. Try again!`;
-                className += ' far';
+            let msg = '', cls = 'result';
+            if(diff <= PERFECT_THRESHOLD){
+                msg = `PERFECT! ${format(elapsed)}<br>±${diff} ms`;
+                cls += ' perfect';
+            }else if(diff <= CLOSE_THRESHOLD){
+                msg = `Close! ${format(elapsed)}<br>${diffSec}s off`;
+                cls += ' close';
+            }else{
+                msg = `Stopped at ${format(elapsed)}<br>${diffSec}s off – try again!`;
+                cls += ' far';
             }
 
-            result.innerHTML = message;
-            result.className = className;
+            result.innerHTML = msg;
+            result.className = cls;
         }
 
-        // Reset everything
-        function reset() {
-            clearInterval(timerInterval);
-            isRunning = false;
-            elapsedTime = 0;
-            startTime = 0;
-            timerInterval = null;
-            
+        // ==== RESET ====
+        function reset(){
+            clearInterval(interval);
+            running = false; elapsed = 0; startTime = 0; interval = null;
             startBtn.disabled = false;
-            stopBtn.disabled = true;
+            stopBtn.disabled  = true;
             updateDisplay();
-            result.textContent = 'Get ready! Can you hit exactly 10 seconds?';
+            result.textContent = 'Ready? Nail 10 seconds to the millisecond!';
             result.className = 'result';
         }
 
-        // Event listeners
-        startBtn.addEventListener('click', () => {
-            reset();
-            startTimer();
-        });
+        // ==== EVENTS ====
+        startBtn.addEventListener('click', () => { reset(); start(); });
+        stopBtn.addEventListener('click', stop);
 
-        stopBtn.addEventListener('click', stopTimer);
-
-        // Initialize
+        // ==== INIT ====
         reset();
     </script>
 </body>
