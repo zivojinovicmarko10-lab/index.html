@@ -41,9 +41,12 @@ button:disabled{background:#636e72;cursor:not-allowed}
 </div>
 
 <script>
+// === CONFIG: CHANGE THIS TO YOUR BOT USERNAME ===
+const BOT_USERNAME = 'stopwatch10s_bot';  // ← YOUR BOT HERE
+
 // === TELEGRAM + CONFETTI + SOUND ===
 const TG = window.Telegram?.WebApp;
-if (TG) { TG.ready(); TG.expand(); TG.MainButton.hide(); } // Hide default, we'll use popup
+if (TG) { TG.ready(); TG.expand(); }
 
 const TARGET = 10000, PERFECT = 50, CLOSE = 200;
 const d = document.getElementById('d'), s = document.getElementById('s'), t = document.getElementById('t'), r = document.getElementById('r');
@@ -52,6 +55,10 @@ let start = 0, elapsed = 0, interval = null, running = false;
 let userId = TG?.initDataUnsafe?.user?.id || 'anon_' + Math.random().toString(36).substr(2,9);
 let userName = TG?.initDataUnsafe?.user?.first_name || 'Player';
 let lastDiff = 0, lastRank = 0;
+
+// === SOUND EFFECTS ===
+const tickSound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQg==');
+const winSound = new Audio('data:audio/wav;base64,UklGRl4GAABXQVZFZm10IBAAAAABAAEAIlYAAESsAAACABAAZGF0Yf4GAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQg==');
 
 // === FORMAT TIME ===
 function format(ms) {
@@ -97,7 +104,7 @@ async function loadLb() {
 function shareScore() {
   const time = format(elapsed);
   const rankText = lastRank > 0 ? ` | Rank #${lastRank}` : '';
-  const text = `I hit ${time} (±${lastDiff}ms) in Stopwatch Challenge!${rankText}\n\nPlay now: https://t.me/${TG.initDataUnsafe.bot_username}/app`;
+  const text = `I hit ${time} (±${lastDiff}ms) in Stopwatch Challenge!${rankText}\n\nPlay now: https://t.me/${BOT_USERNAME}/app`;
   
   if (TG) {
     TG.showPopup({
@@ -135,7 +142,7 @@ async function stopTimer() {
   lastDiff = Math.abs(elapsed - TARGET);
   
   await saveScore(lastDiff);
-  await loadLb(); // Get updated rank
+  await loadLb();
   
   let msg = '', cls = 'r';
   if (lastDiff <= PERFECT) {
